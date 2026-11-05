@@ -18,19 +18,24 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  TF_DIR: EKS-Terraform
+  TF_DIR: EKS-TF
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: us-east-1
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
 
       - uses: hashicorp/setup-terraform@v3
         with:
