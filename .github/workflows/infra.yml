@@ -18,7 +18,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  TF_DIR: .
+  TF_DIR: Terraform
 
 jobs:
   terraform:
