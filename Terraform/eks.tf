@@ -144,34 +144,18 @@ resource "aws_route_table_association" "priv2" {
 }
 
 resource "aws_security_group" "allow_all" {
+    name        = "allow-all-sg"
+    description = "Allow all inbound and outbound traffic"
+    vpc_id      = aws_vpc.eks_vpc.id
 
-  name        = "allow-all-sg"
-  description = "Allow all inbound and outbound traffic"
-  vpc_id      = aws_vpc.eks_vpc.id
+    # No inbound rules required for SSM
 
-  ingress {
-
-    description = "Allow all inbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-
-    description = "Allow all outbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "allow-all-sg"
-  }
+    egress {
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
 }
 ############################
 # IAM ROLE - CLUSTER
@@ -307,6 +291,7 @@ resource "aws_instance" "eks" {
     ami           = "ami-0c230065b91270bc6"
     instance_type = "t3.small"
     subnet_id     = aws_subnet.public1.id
+    iam_instance_profile = aws_iam_instance_profile.eks_client_ssm.name
     vpc_security_group_ids = [aws_security_group.allow_all.id]
     root_block_device {
       volume_size = "30"
@@ -434,4 +419,32 @@ resource "aws_eks_addon" "ebs_csi" {
     aws_eks_node_group.node_group,
     aws_eks_pod_identity_association.ebs_csi
   ]
+}
+
+# IAM role for EC2 SSM access
+resource "aws_iam_role" "eks_client_ssm_role" {
+  name = "eks-client-ssm-role"
+
+  assume_role_policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [{
+         Effect = "Allow"
+         Principal = {
+             Service = "ec2.amazonaws.com"
+         }
+         Action = "sts:AssumeRole"
+       }]
+    })
+}
+
+# Attach AWS managed SSM policy
+resource "aws_iam_role_policy_attachment" "eks_client_ssm" {
+  role       = aws_iam_role.eks_client_ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+# Instance profile for EC2
+resource "aws_iam_instance_profile" "eks_client_ssm" {
+  name = "eks-client-ssm-profile"
+  role = aws_iam_role.eks_client_ssm_role.name
 }
