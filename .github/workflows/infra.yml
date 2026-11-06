@@ -61,7 +61,7 @@
 #         run: terraform destroy -auto-approve
 #--------------------------------------------------------------
 
-name: infra Terraform
+name: Infra Terraform
 
 on:
   workflow_dispatch:
