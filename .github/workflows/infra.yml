@@ -1,16 +1,79 @@
-name: EKS Terraform
+# name: EKS Terraform
+
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       action:
+#         type: choice
+#         description: Terraform action
+#         options:
+#           - apply
+#           - destroy
+#         default: apply
+#         required: true
+
+# permissions:
+#   id-token: write
+#   contents: read
+
+# env:
+#   AWS_REGION: us-east-1
+#   TF_DIR: Terraform
+
+# jobs:
+#   terraform:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+
+#       - name: Configure AWS Credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+#           aws-region: ${{ env.AWS_REGION }}
+
+#       - name: Verify AWS identity
+#         run: aws sts get-caller-identity
+
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: "1.12.2"
+
+#       - name: Terraform Init
+#         working-directory: ${{ env.TF_DIR }}
+#         run: terraform init
+
+#       - name: Terraform Validate
+#         working-directory: ${{ env.TF_DIR }}
+#         run: terraform validate
+
+#       - name: Terraform Apply
+#         if: ${{ inputs.action == 'apply' }}
+#         working-directory: ${{ env.TF_DIR }}
+#         run: terraform apply -auto-approve
+
+#       - name: Terraform Destroy
+#         if: ${{ inputs.action == 'destroy' }}
+#         working-directory: ${{ env.TF_DIR }}
+#         run: terraform destroy -auto-approve
+#--------------------------------------------------------------
+
+name: infra Terraform
 
 on:
   workflow_dispatch:
     inputs:
       action:
+        description: "Terraform action"
+        required: true
         type: choice
-        description: Terraform action
         options:
           - apply
           - destroy
         default: apply
-        required: true
 
 permissions:
   id-token: write
@@ -18,44 +81,56 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  TF_DIR: Terraform
+  TF_VERSION: "1.12.2"
+  TF_WORKING_DIR: EKS-Terraform
 
 jobs:
   terraform:
+    name: Terraform Apply or Destroy
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Verify AWS identity
+      - name: Verify AWS Identity
         run: aws sts get-caller-identity
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.12.2"
+          terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        working-directory: ${{ env.TF_DIR }}
+        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init
 
       - name: Terraform Validate
-        working-directory: ${{ env.TF_DIR }}
+        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform validate
+
+      - name: Terraform Plan
+        if: ${{ inputs.action == 'apply' }}
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform plan -out=tfplan
 
       - name: Terraform Apply
         if: ${{ inputs.action == 'apply' }}
-        working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -auto-approve tfplan
 
       - name: Terraform Destroy
         if: ${{ inputs.action == 'destroy' }}
-        working-directory: ${{ env.TF_DIR }}
+        working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform destroy -auto-approve
+
+      - name: Terraform Outputs
+        if: ${{ inputs.action == 'apply' }}
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform output
