@@ -231,7 +231,8 @@ resource "aws_eks_cluster" "eks" {
   role_arn = aws_iam_role.cluster_role.arn
   version  = var.cluster_version
   access_config {
-    authentication_mode = "API_AND_CONFIG_MAP"
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
   }
   vpc_config {
 
