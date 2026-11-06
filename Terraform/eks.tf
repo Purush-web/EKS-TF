@@ -445,8 +445,44 @@ resource "aws_iam_role_policy_attachment" "eks_client_ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+resource "aws_iam_role_policy" "eks_client_describe" {
+  name = "eks-client-describe-cluster"
+  role = aws_iam_role.eks_client_ssm_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "eks:DescribeCluster"
+      ]
+      Resource = aws_eks_cluster.eks.arn
+    }]
+  })
+}
+
 # Instance profile for EC2
 resource "aws_iam_instance_profile" "eks_client_ssm" {
   name = "eks-client-ssm-profile"
   role = aws_iam_role.eks_client_ssm_role.name
+}
+
+resource "aws_eks_access_entry" "eks_client" {
+  cluster_name  = aws_eks_cluster.eks.name
+  principal_arn = aws_iam_role.eks_client_ssm_role.arn
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "eks_client_admin" {
+  cluster_name  = aws_eks_cluster.eks.name
+  principal_arn = aws_iam_role.eks_client_ssm_role.arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [
+    aws_eks_access_entry.eks_client
+  ]
 }
