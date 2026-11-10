@@ -479,10 +479,6 @@ resource "aws_eks_access_policy_association" "eks_client_admin" {
   principal_arn = aws_iam_role.eks_client_ssm_role.arn
   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
 
-resource "aws_iam_role_policy_attachment" "eks_client_ecr" {
-  role       = aws_iam_role.eks_client_ssm_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
-}
 
   access_scope {
     type = "cluster"
@@ -491,4 +487,10 @@ resource "aws_iam_role_policy_attachment" "eks_client_ecr" {
   depends_on = [
     aws_eks_access_entry.eks_client
   ]
+}
+
+# ECR permissions for EC2 client
+resource "aws_iam_role_policy_attachment" "eks_client_ecr" {
+  role       = aws_iam_role.eks_client_ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
 }
